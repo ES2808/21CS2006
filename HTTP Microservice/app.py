@@ -2,53 +2,51 @@ from flask import Flask, jsonify
 import time
 
 app = Flask(__name__)
-window_size = 10
-numbers_window = []
+WINDOW_SIZE = 10
+number_window = []
 
-# Mock data for number types
-mock_data = {
+# Mock data for different number types
+mock_numbers = {
     'p': [2, 3, 5, 7, 11],
     'f': [55, 89, 144, 233, 377, 610, 987, 1597, 2584, 4181],
     'e': [8, 10, 12, 14, 16, 18, 20, 22, 24, 26, 28, 30, 32, 34, 36, 38, 40, 42, 44, 46, 48, 50, 52, 54, 56],
     'r': [2, 19, 25, 7, 4, 24, 17, 27, 30, 21, 14, 10, 23]
 }
 
-def fetch_numbers(numberid):
-    # Simulate async operation with mock data
-    time.sleep(0.1)
-    return mock_data.get(numberid, [])
+def get_mock_numbers(type_id):
+    time.sleep(0.1)  # Simulate a delay
+    return mock_numbers.get(type_id, [])
 
-def calculate_average(numbers):
+def compute_average(numbers):
     if not numbers:
         return 0.0
     return sum(numbers) / len(numbers)
 
-@app.route('/numbers/<numberid>', methods=['GET'])
-def get_numbers(numberid):
-    if numberid not in mock_data:
-        return jsonify({"error": "Invalid number ID"}), 400
+@app.route('/numbers/<type_id>', methods=['GET'])
+def fetch_numbers(type_id):
+    if type_id not in mock_numbers:
+        return jsonify({"error": "Invalid number type"}), 400
 
-    new_numbers = fetch_numbers(numberid)
+    fetched_numbers = get_mock_numbers(type_id)
+    previous_state = number_window.copy()
 
-    prev_state = list(numbers_window)
+    # Update the window with new numbers ensuring no duplicates
+    for num in fetched_numbers:
+        if num not in number_window:
+            number_window.append(num)
 
-    # Add new numbers to the window, ensuring uniqueness
-    for num in new_numbers:
-        if num not in numbers_window:
-            numbers_window.append(num)
+    # Maintain the window size limit
+    while len(number_window) > WINDOW_SIZE:
+        number_window.pop(0)
 
-    # Trim the window to the specified size
-    while len(numbers_window) > window_size:
-        numbers_window.pop(0)
-
-    curr_state = list(numbers_window)
-    avg = calculate_average(curr_state)
+    current_state = number_window.copy()
+    average = compute_average(current_state)
 
     response = {
-        "windowPrevState": prev_state,
-        "windowCurrState": curr_state,
-        "numbers": new_numbers,
-        "avg": round(avg, 2)
+        "windowPrevState": previous_state,
+        "windowCurrState": current_state,
+        "numbers": fetched_numbers,
+        "avg": round(average, 2)
     }
 
     return jsonify(response)
